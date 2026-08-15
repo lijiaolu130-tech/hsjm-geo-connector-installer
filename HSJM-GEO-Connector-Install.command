@@ -4,7 +4,7 @@ set -euo pipefail
 VERSION="2.0.9.5"
 INSTALLER_REVISION="fix3"
 ASSET_URL="https://github.com/lijiaolu130-tech/hsjm-geo-connector-installer/releases/download/hsjm-installer-v2.0.9.5-fix3/hsjm-geo-connector-v2.0.9.5-secure.5.zip"
-ASSET_API_URL="https://api.github.com/repos/lijiaolu130-tech/hsjm-geo-connector-installer/releases/assets/"
+ASSET_API_URL="https://api.github.com/repos/lijiaolu130-tech/hsjm-geo-connector-installer/releases/assets/515428281"
 EXPECTED_SHA256="776e8cfa71276895a1e73496cbe91bffd3fa9f81afb11ea08aee686720ac0dd6"
 DOWNLOAD_DIR="${HOME}/Downloads"
 LEGACY_ZIP_PATH="${DOWNLOAD_DIR}/hsjm-geo-connector-v${VERSION}.zip"
