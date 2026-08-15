@@ -2,14 +2,17 @@
 set -euo pipefail
 
 VERSION="2.0.9.5"
-ASSET_URL="https://github.com/lijiaolu130-tech/hsjm-geo-connector-installer/releases/download/hsjm-installer-v2.0.9.5-fix2/hsjm-geo-connector-v2.0.9.5-secure.5.zip"
-ASSET_API_URL="https://api.github.com/repos/lijiaolu130-tech/hsjm-geo-connector-installer/releases/assets/515410494"
+INSTALLER_REVISION="fix3"
+ASSET_URL="https://github.com/lijiaolu130-tech/hsjm-geo-connector-installer/releases/download/hsjm-installer-v2.0.9.5-fix3/hsjm-geo-connector-v2.0.9.5-secure.5.zip"
+ASSET_API_URL="https://api.github.com/repos/lijiaolu130-tech/hsjm-geo-connector-installer/releases/assets/"
 EXPECTED_SHA256="776e8cfa71276895a1e73496cbe91bffd3fa9f81afb11ea08aee686720ac0dd6"
 DOWNLOAD_DIR="${HOME}/Downloads"
 LEGACY_ZIP_PATH="${DOWNLOAD_DIR}/hsjm-geo-connector-v${VERSION}.zip"
 VERSIONED_ZIP_PATH="${DOWNLOAD_DIR}/hsjm-geo-connector-v${VERSION}-${EXPECTED_SHA256:0:8}.zip"
-TARGET_DIR="${HOME}/Library/Application Support/HSJM-GEO-Connector/v${VERSION}-${EXPECTED_SHA256:0:8}"
-PROFILE_DIR="${HOME}/Library/Application Support/HSJM-GEO-Connector/browser-profile"
+TARGET_DIR="${HOME}/Library/Application Support/HSJM-GEO-Connector/v${VERSION}-${EXPECTED_SHA256:0:8}-${INSTALLER_REVISION}"
+PROFILE_DIR="${HOME}/Library/Application Support/HSJM-GEO-Connector/browser-profile-${INSTALLER_REVISION}"
+CFT_ROOT="${HOME}/Library/Application Support/HSJM-GEO-Connector/chrome-for-testing"
+CFT_META_URL="https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json"
 PORTAL_URL="https://huasheng-jinma-geo-portal.lijiaolu130.chatgpt.site/"
 
 echo "华昇金玛 GEO 连接器安装助手 ${VERSION}"
@@ -67,12 +70,56 @@ fi
 echo "[4/4] 启动 GEO 专用 Chrome 并自动载入连接器…"
 BROWSER_APP=""
 BROWSER_LABEL=""
-PLAYWRIGHT_CACHE="${HOME}/Library/Caches/ms-playwright"
-if [[ -d "${PLAYWRIGHT_CACHE}" ]]; then
-  CFT_BIN="$(find "${PLAYWRIGHT_CACHE}" -type f -path '*/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing' -perm -111 -print -quit 2>/dev/null || true)"
-  if [[ -n "${CFT_BIN}" ]]; then
-    BROWSER_APP="${CFT_BIN%/Contents/MacOS/Google Chrome for Testing}"
-    BROWSER_LABEL="Google Chrome for Testing"
+find_cft_bin() {
+  local root="$1"
+  find "${root}" -type f -path '*/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing' -perm -111 -print -quit 2>/dev/null || true
+}
+
+for cft_root in "${HOME}/Library/Caches/ms-playwright" "${CFT_ROOT}"; do
+  if [[ -d "${cft_root}" ]]; then
+    CFT_BIN="$(find_cft_bin "${cft_root}")"
+    if [[ -n "${CFT_BIN}" ]]; then
+      BROWSER_APP="${CFT_BIN%/Contents/MacOS/Google Chrome for Testing}"
+      BROWSER_LABEL="Google Chrome for Testing"
+      break
+    fi
+  fi
+done
+
+if [[ -z "${BROWSER_APP}" ]]; then
+  echo "未发现 Chrome for Testing，正在下载官方隔离浏览器（只保存到 GEO 专用目录）…"
+  mkdir -p "${CFT_ROOT}"
+  cft_platform=""
+  case "$(uname -m)" in
+    arm64) cft_platform="mac-arm64" ;;
+    x86_64) cft_platform="mac-x64" ;;
+    *) echo "未识别的 Mac 架构，跳过自动浏览器下载。" ;;
+  esac
+  if [[ -n "${cft_platform}" ]]; then
+    cft_run_id="$(date '+%Y%m%d-%H%M%S')"
+    cft_meta_path="${CFT_ROOT}/metadata-${cft_run_id}.json"
+    if curl --fail --location --http1.1 --retry 4 --retry-delay 2 --connect-timeout 15 --max-time 90 --output "${cft_meta_path}" "${CFT_META_URL}"; then
+      CFT_URL="$(grep -Eo 'https://storage.googleapis.com/chrome-for-testing-public/[0-9.]+/'"${cft_platform}"'/chrome-[^\"]+\.zip' "${cft_meta_path}" | head -1 || true)"
+      if [[ -n "${CFT_URL}" ]]; then
+        cft_version="$(printf '%s' "${CFT_URL}" | awk -F/ '{print $5}')"
+        cft_dir="${CFT_ROOT}/${cft_version}-${cft_platform}"
+        cft_zip="${CFT_ROOT}/chrome-${cft_version}-${cft_platform}.zip"
+        cft_part="${cft_zip}.part"
+        if [[ ! -f "${cft_zip}" ]]; then
+          curl --fail --location --http1.1 --retry 4 --retry-delay 2 --connect-timeout 15 --max-time 900 --output "${cft_part}" "${CFT_URL}"
+          mv "${cft_part}" "${cft_zip}"
+        fi
+        if unzip -tq "${cft_zip}" >/dev/null 2>&1; then
+          mkdir -p "${cft_dir}"
+          unzip -q -n "${cft_zip}" -d "${cft_dir}"
+          CFT_BIN="$(find_cft_bin "${cft_dir}")"
+          if [[ -n "${CFT_BIN}" ]]; then
+            BROWSER_APP="${CFT_BIN%/Contents/MacOS/Google Chrome for Testing}"
+            BROWSER_LABEL="Google Chrome for Testing"
+          fi
+        fi
+      fi
+    fi
   fi
 fi
 if [[ -z "${BROWSER_APP}" ]]; then

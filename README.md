@@ -4,8 +4,8 @@
 
 ## 安装
 
-1. macOS 优先下载 `HSJM-GEO-Connector-Install.command`：它会校验 ZIP，并在已安装 Chrome for Testing 的情况下启动独立 GEO 浏览器并自动载入连接器，不改动日常 Chrome。
-2. Windows 优先下载 `HSJM-GEO-Connector-Install.ps1`：它会校验 ZIP，并启动独立浏览器配置自动载入连接器。
+1. macOS 优先下载 `HSJM-GEO-Connector-Install.command`：它会校验 ZIP；如果没有 Chrome for Testing，会自动下载官方对应架构的隔离浏览器，然后自动载入连接器，不改动日常 Chrome。
+2. Windows 优先下载 `HSJM-GEO-Connector-Install.ps1`：它会校验 ZIP；如果没有 Chrome for Testing，会自动下载官方隔离浏览器，然后自动载入连接器。
 3. 如果设备没有可接受命令行扩展载入的 Chrome for Testing，再下载 ZIP，打开 `chrome://extensions`，开启开发者模式并手动加载包含 `manifest.json` 的最外层目录。
 
 ## 运行边界

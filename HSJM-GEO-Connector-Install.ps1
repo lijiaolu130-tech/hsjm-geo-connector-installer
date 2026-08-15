@@ -1,14 +1,17 @@
 $ErrorActionPreference = 'Stop'
 
 $Version = '2.0.9.5'
-$AssetUrl = 'https://github.com/lijiaolu130-tech/hsjm-geo-connector-installer/releases/download/hsjm-installer-v2.0.9.5-fix2/hsjm-geo-connector-v2.0.9.5-secure.5.zip'
-$AssetApiUrl = 'https://api.github.com/repos/lijiaolu130-tech/hsjm-geo-connector-installer/releases/assets/515410494'
+$InstallerRevision = 'fix3'
+$AssetUrl = 'https://github.com/lijiaolu130-tech/hsjm-geo-connector-installer/releases/download/hsjm-installer-v2.0.9.5-fix3/hsjm-geo-connector-v2.0.9.5-secure.5.zip'
+$AssetApiUrl = 'https://api.github.com/repos/lijiaolu130-tech/hsjm-geo-connector-installer/releases/assets/'
 $ExpectedSha256 = '776e8cfa71276895a1e73496cbe91bffd3fa9f81afb11ea08aee686720ac0dd6'
 $DownloadDir = Join-Path $env:USERPROFILE 'Downloads'
 $LegacyZipPath = Join-Path $DownloadDir "hsjm-geo-connector-v$Version.zip"
 $VersionedZipPath = Join-Path $DownloadDir "hsjm-geo-connector-v$Version-$($ExpectedSha256.Substring(0, 8)).zip"
-$TargetDir = Join-Path $env:LOCALAPPDATA "HSJM-GEO-Connector\v$Version-$($ExpectedSha256.Substring(0, 8))"
-$ProfileDir = Join-Path $env:LOCALAPPDATA 'HSJM-GEO-Connector\browser-profile'
+$TargetDir = Join-Path $env:LOCALAPPDATA "HSJM-GEO-Connector\v$Version-$($ExpectedSha256.Substring(0, 8))-$InstallerRevision"
+$ProfileDir = Join-Path $env:LOCALAPPDATA "HSJM-GEO-Connector\browser-profile-$InstallerRevision"
+$CftRoot = Join-Path $env:LOCALAPPDATA 'HSJM-GEO-Connector\chrome-for-testing'
+$CftMetaUrl = 'https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json'
 $PortalUrl = 'https://huasheng-jinma-geo-portal.lijiaolu130.chatgpt.site/'
 $Headers = @{ Accept = 'application/octet-stream'; 'X-GitHub-Api-Version' = '2022-11-28' }
 
@@ -55,10 +58,45 @@ if (-not (Test-Path (Join-Path $TargetDir 'manifest.json'))) {
 }
 
 Write-Host '[4/4] 启动 GEO 专用 Chrome 并自动载入连接器…'
-$Chrome = Get-Command chrome.exe -ErrorAction SilentlyContinue
+$ChromePath = $null
+$ExistingCft = Get-ChildItem -Path (Join-Path $env:LOCALAPPDATA 'ms-playwright'), $CftRoot -Filter 'chrome.exe' -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($ExistingCft) {
+  $ChromePath = $ExistingCft.FullName
+}
+if (-not $ChromePath) {
+  Write-Host '未发现 Chrome for Testing，正在下载官方隔离浏览器（只保存到 GEO 专用目录）…'
+  New-Item -ItemType Directory -Force -Path $CftRoot | Out-Null
+  $CftMetaPath = Join-Path $CftRoot ("metadata-$(Get-Date -Format 'yyyyMMdd-HHmmss').json")
+  $CftPlatform = if ([Environment]::Is64BitOperatingSystem) { 'win64' } else { 'win32' }
+  try {
+    Invoke-WebRequest -UseBasicParsing -Uri $CftMetaUrl -OutFile $CftMetaPath -MaximumRedirection 10 -TimeoutSec 90
+    $CftPattern = 'https://storage\.googleapis\.com/chrome-for-testing-public/[0-9.]+/' + [regex]::Escape($CftPlatform) + '/chrome-[^\x22 ]+\.zip'
+    $CftMatch = [regex]::Match((Get-Content -Raw -LiteralPath $CftMetaPath), $CftPattern)
+    if ($CftMatch.Success) {
+      $CftUrl = $CftMatch.Value
+      $CftVersion = ($CftUrl -split '/')[4]
+      $CftDir = Join-Path $CftRoot "$CftVersion-$CftPlatform"
+      $CftZip = Join-Path $CftRoot "chrome-$CftVersion-$CftPlatform.zip"
+      if (-not (Test-Path -LiteralPath $CftZip)) {
+        Invoke-WebRequest -UseBasicParsing -Uri $CftUrl -OutFile "$CftZip.part" -MaximumRedirection 10 -TimeoutSec 900
+        Move-Item -LiteralPath "$CftZip.part" -Destination $CftZip
+      }
+      if (-not (Test-Path -LiteralPath $CftDir)) {
+        New-Item -ItemType Directory -Force -Path $CftDir | Out-Null
+      }
+      Expand-Archive -LiteralPath $CftZip -DestinationPath $CftDir -Force
+      $DownloadedCft = Get-ChildItem -Path $CftDir -Filter 'chrome.exe' -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+      if ($DownloadedCft) { $ChromePath = $DownloadedCft.FullName }
+    }
+  } catch {
+    Write-Host 'Chrome for Testing 自动下载失败，将继续尝试使用本机 Chrome。'
+  }
+}
+$Chrome = if ($ChromePath) { Get-Item -LiteralPath $ChromePath } else { Get-Command chrome.exe -ErrorAction SilentlyContinue }
 if ($Chrome) {
+  $ChromeExecutable = if ($ChromePath) { $ChromePath } else { $Chrome.Source }
   New-Item -ItemType Directory -Force -Path $ProfileDir | Out-Null
-  Start-Process -FilePath $Chrome.Source -ArgumentList @(
+  Start-Process -FilePath $ChromeExecutable -ArgumentList @(
     "--user-data-dir=$ProfileDir",
     "--load-extension=$TargetDir",
     '--no-first-run',
