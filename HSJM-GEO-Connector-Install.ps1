@@ -1,8 +1,8 @@
 $ErrorActionPreference = 'Stop'
 
 $Version = '2.0.9.5'
-$AssetUrl = 'https://github.com/lijiaolu130-tech/hsjm-geo-connector-installer/releases/download/hsjm-installer-v2.0.9.5-fix1/hsjm-geo-connector-v2.0.9.5-secure.5.zip'
-$AssetApiUrl = 'https://api.github.com/repos/lijiaolu130-tech/hsjm-geo-connector-installer/releases/assets/515312955'
+$AssetUrl = 'https://github.com/lijiaolu130-tech/hsjm-geo-connector-installer/releases/download/hsjm-installer-v2.0.9.5-fix2/hsjm-geo-connector-v2.0.9.5-secure.5.zip'
+$AssetApiUrl = 'https://api.github.com/repos/lijiaolu130-tech/hsjm-geo-connector-installer/releases/assets/515410494'
 $ExpectedSha256 = '776e8cfa71276895a1e73496cbe91bffd3fa9f81afb11ea08aee686720ac0dd6'
 $DownloadDir = Join-Path $env:USERPROFILE 'Downloads'
 $LegacyZipPath = Join-Path $DownloadDir "hsjm-geo-connector-v$Version.zip"
