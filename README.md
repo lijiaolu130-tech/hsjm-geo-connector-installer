@@ -4,10 +4,9 @@
 
 ## 安装
 
-1. 打开 Releases，下载对应版本的 ZIP 并解压。
-2. 在 Chrome 地址栏打开 `chrome://extensions`。
-3. 打开右上角“开发者模式”。
-4. 点击“加载已解压的扩展程序”，选择解压后的扩展目录；不要选择 ZIP 文件本身。
+1. macOS 优先下载 `HSJM-GEO-Connector-Install.command`：它会校验 ZIP，并在已安装 Chrome for Testing 的情况下启动独立 GEO 浏览器并自动载入连接器，不改动日常 Chrome。
+2. Windows 优先下载 `HSJM-GEO-Connector-Install.ps1`：它会校验 ZIP，并启动独立浏览器配置自动载入连接器。
+3. 如果设备没有可接受命令行扩展载入的 Chrome for Testing，再下载 ZIP，打开 `chrome://extensions`，开启开发者模式并手动加载包含 `manifest.json` 的最外层目录。
 
 ## 运行边界
 
@@ -15,3 +14,4 @@
 - 不读取或保存密码、验证码、Cookie、Token、私钥。
 - 不绕过验证码、实名、WAF 或平台风控。
 - 真实发布以平台后台公开回执为准。
+- 专用浏览器首次打开后仍需所有者本人登录门户；平台验证码、实名和风控按平台要求人工完成。
